@@ -1,63 +1,88 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function LoadingScreen() {
-  const [visible, setVisible] = useState(true);
-  const [progress, setProgress] = useState(0);
+  const [progress, setProgress]   = useState(0);
+  const [visible,  setVisible]    = useState(true);
+  const [phase,    setPhase]      = useState<"loading" | "ready" | "exit">("loading");
 
   useEffect(() => {
-    // Simulate loading — replace with actual asset preload in production
+    // Fast ramp to 85%, then slow down for dramatic effect
     const interval = setInterval(() => {
-      setProgress((p) => {
-        if (p >= 100) {
-          clearInterval(interval);
-          setTimeout(() => setVisible(false), 600);
-          return 100;
-        }
-        return p + Math.random() * 8 + 2;
+      setProgress(p => {
+        if (p >= 100) { clearInterval(interval); return 100; }
+        const increment = p < 85 ? Math.random() * 12 + 4 : Math.random() * 2 + 0.5;
+        return Math.min(p + increment, 100);
       });
-    }, 80);
-
+    }, 60);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (progress >= 100) {
+      setTimeout(() => setPhase("ready"), 300);
+      setTimeout(() => setPhase("exit"),  1000);
+      setTimeout(() => setVisible(false), 2400);
+    }
+  }, [progress]);
 
   return (
     <AnimatePresence>
       {visible && (
         <motion.div
-          className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center"
+          className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black"
           exit={{ opacity: 0 }}
-          transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 1.4, ease: [0.16, 1, 0.3, 1] }}
         >
-          {/* Logo */}
+          {/* DF Logo */}
           <motion.div
-            className="text-white font-mono text-2xl tracking-[0.5em] mb-12"
-            initial={{ opacity: 0, y: 10 }}
+            className="font-mono tracking-[0.6em] text-white mb-10 text-lg select-none"
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, delay: 0.2 }}
+            transition={{ duration: 1.2, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
           >
             DF
           </motion.div>
 
           {/* Progress bar */}
-          <div className="w-32 h-px bg-white/10 relative overflow-hidden">
-            <motion.div
-              className="absolute top-0 left-0 h-full bg-[#4FC3F7]"
-              style={{ width: `${Math.min(progress, 100)}%` }}
-            />
-          </div>
-
-          {/* Progress number */}
           <motion.div
-            className="text-white/20 font-mono text-[10px] tracking-[0.4em] mt-4"
+            className="w-24 h-px bg-white/8 relative overflow-hidden"
+            initial={{ opacity: 0, scaleX: 0 }}
+            animate={{ opacity: 1, scaleX: 1 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+          >
+            <motion.div
+              className="absolute inset-y-0 left-0 bg-[#4FC3F7]"
+              style={{ width: `${Math.min(progress, 100)}%`, transition: "width 80ms linear" }}
+            />
+          </motion.div>
+
+          {/* Counter */}
+          <motion.div
+            className="font-mono text-[9px] tracking-[0.5em] text-white/20 mt-4 tabular-nums"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
+            transition={{ delay: 0.6 }}
           >
-            {Math.min(Math.round(progress), 100).toString().padStart(3, "0")}
+            {String(Math.min(Math.floor(progress), 100)).padStart(3, "0")}
           </motion.div>
+
+          {/* "ENTERING" on ready */}
+          <AnimatePresence>
+            {phase === "ready" && (
+              <motion.div
+                className="absolute bottom-12 font-mono text-[8px] tracking-[0.8em] text-white/30"
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.6 }}
+              >
+                ENTERING UNIVERSE
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
       )}
     </AnimatePresence>

@@ -1,84 +1,83 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Text } from "@react-three/drei";
 import * as THREE from "three";
 import { ENVIRONMENTS, THREE_COLORS } from "@/config/world.config";
-import { getScrollProgress } from "@/hooks/useScrollProgress";
+import { getScrollProgress } from "@/hooks/useLenis";
 
-function FloatingScreen({
-  position,
-  rotation,
-  index,
-}: {
-  position: [number, number, number];
-  rotation: [number, number, number];
-  index: number;
-}) {
-  const meshRef = useRef<THREE.Mesh>(null);
-  const time = useRef(0);
+const SCREENS = [
+  { pos: [-4.5, 0.5, 0]   as [number,number,number], rot: [0, 0.35, 0] as [number,number,number] },
+  { pos: [0,    1.2, -2]  as [number,number,number], rot: [0, 0,    0] as [number,number,number] },
+  { pos: [4.5,  0,  -0.5] as [number,number,number], rot: [0,-0.35, 0] as [number,number,number] },
+  { pos: [-2.5,-1.8, -5]  as [number,number,number], rot: [0, 0.2,  0.04] as [number,number,number] },
+  { pos: [2.5,  2.2, -4]  as [number,number,number], rot: [0.04,-0.2, 0] as [number,number,number] },
+];
+
+function Screen({ pos, rot, index }: { pos: [number,number,number]; rot: [number,number,number]; index: number }) {
+  const groupRef = useRef<THREE.Group>(null);
+  const time = useRef(Math.random() * Math.PI * 2);
+
+  const screenMat = useMemo(() => new THREE.MeshStandardMaterial({
+    color: new THREE.Color(0x020210),
+    emissive: THREE_COLORS.glowBlue,
+    emissiveIntensity: 0.5,
+    transparent: true,
+    opacity: 0.92,
+  }), []);
+
+  const frameMat = useMemo(() => new THREE.MeshStandardMaterial({
+    color: "#000",
+    emissive: THREE_COLORS.accentBlue,
+    emissiveIntensity: 1.0,
+    transparent: true,
+    opacity: 0.7,
+  }), []);
 
   useFrame((_, delta) => {
     time.current += delta;
-    if (!meshRef.current) return;
-    const phase = index * 1.2;
-    meshRef.current.position.y =
-      position[1] + Math.sin(time.current * 0.2 + phase) * 0.12;
-    meshRef.current.rotation.y =
-      rotation[1] + Math.sin(time.current * 0.12 + phase) * 0.06;
+    if (!groupRef.current) return;
+    groupRef.current.position.y = pos[1] + Math.sin(time.current * 0.2) * 0.1;
+    groupRef.current.rotation.y = rot[1] + Math.sin(time.current * 0.12) * 0.04;
   });
 
   return (
-    <mesh ref={meshRef} position={position} rotation={rotation}>
-      <planeGeometry args={[3.5, 2.2]} />
-      <meshStandardMaterial
-        color={new THREE.Color(0x050510)}
-        emissive={THREE_COLORS.glowBlue}
-        emissiveIntensity={0.3}
-        transparent
-        opacity={0.85}
-      />
-    </mesh>
+    <group ref={groupRef} position={pos} rotation={rot}>
+      {/* Screen surface */}
+      <mesh>
+        <planeGeometry args={[3.8, 2.3]} />
+        <primitive object={screenMat} attach="material" />
+      </mesh>
+      {/* Frame border */}
+      <mesh position={[0, 0, -0.02]}>
+        <boxGeometry args={[4.0, 2.45, 0.04]} />
+        <primitive object={frameMat} attach="material" />
+      </mesh>
+      {/* Screen glow line at bottom */}
+      <mesh position={[0, -1.12, 0.01]}>
+        <boxGeometry args={[3.8, 0.003, 0.01]} />
+        <meshStandardMaterial color="#000" emissive={THREE_COLORS.accentBlue} emissiveIntensity={4} />
+      </mesh>
+    </group>
   );
 }
-
-const SCREENS = [
-  { pos: [-4, 0.5, 0] as [number, number, number], rot: [0, 0.3, 0] as [number, number, number] },
-  { pos: [0, 1, -3] as [number, number, number],   rot: [0, 0, 0] as [number, number, number] },
-  { pos: [4, 0, -1] as [number, number, number],   rot: [0, -0.3, 0] as [number, number, number] },
-  { pos: [-2, -1.5, -5] as [number, number, number], rot: [0, 0.2, 0.05] as [number, number, number] },
-  { pos: [2.5, 2, -4] as [number, number, number],  rot: [0.05, -0.15, 0] as [number, number, number] },
-];
 
 export function PortfolioSpace() {
   const groupRef = useRef<THREE.Group>(null);
 
   useFrame(() => {
     if (!groupRef.current) return;
-    const progress = getScrollProgress();
-    const center = 0.5;
-    const spread = 0.15;
-    const dist = Math.abs(progress - center);
-    groupRef.current.visible = dist < spread;
+    const p = getScrollProgress();
+    groupRef.current.visible = Math.abs(p - 0.5) < 0.18;
   });
 
   return (
     <group ref={groupRef} position={[0, 0, ENVIRONMENTS.portfolio.z]}>
       {SCREENS.map((s, i) => (
-        <FloatingScreen key={i} position={s.pos} rotation={s.rot} index={i} />
+        <Screen key={i} pos={s.pos} rot={s.rot} index={i} />
       ))}
-      <Text
-        font="/fonts/GeistMono-Regular.woff2"
-        fontSize={0.08}
-        letterSpacing={0.6}
-        color="#4FC3F7"
-        anchorX="center"
-        position={[0, -4, 0]}
-      >
-        PORTFOLIO
-      </Text>
-      <pointLight position={[0, 4, 4]} color={THREE_COLORS.accentBlue} intensity={4} distance={22} />
+      <pointLight position={[0, 4, 4]}  color={THREE_COLORS.accentBlue} intensity={10} distance={25} decay={2} />
+      <pointLight position={[0, -3, 2]} color={THREE_COLORS.glowBlue}   intensity={4}  distance={18} decay={2} />
     </group>
   );
 }
