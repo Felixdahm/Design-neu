@@ -1,28 +1,91 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getScrollProgress } from "@/hooks/useLenis";
 
+// All text that gets typed out in order
+const TEXTS = [
+  "TERMINAL_v1.0 — CONTACT",
+  "Starte ein Projekt.",
+  "Antwort meist innerhalb von 24h",
+  "NAME",
+  "E-MAIL",
+  "NACHRICHT",
+  "SENDEN",
+  "INSTAGRAM",
+  "LINKEDIN",
+];
+
+const TOTAL        = TEXTS.reduce((s, t) => s + t.length, 0);
+const SCROLL_START = 0.74;
+const SCROLL_END   = 0.97;
+const CHARS_PER_SEC = 28; // typewriter speed — never faster than this
+
 export function ContactForm() {
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const rafRef     = useRef<number>(0);
-  const [status, setStatus]   = useState<"idle" | "sending" | "sent">("idle");
-  const [form, setForm]       = useState({ name: "", email: "", message: "" });
-  const [visible, setVisible] = useState(false);
+  const [status, setStatus] = useState<"idle" | "sending" | "sent">("idle");
+  const [form, setForm]     = useState({ name: "", email: "", message: "" });
+  const [interactive, setInteractive] = useState(false);
+
+  const t         = useRef<Array<HTMLSpanElement | null>>(TEXTS.map(() => null));
+  const rafRef    = useRef<number>(0);
+  const prevN     = useRef(-1);
+  const prevInt   = useRef(false);
+  const startTime = useRef<number | null>(null); // when typing began
+  const typedN    = useRef(0);                   // rate-limited char count
 
   useEffect(() => {
     function tick() {
-      const p   = getScrollProgress();
-      const dist = Math.abs(p - 0.88);
-      const show  = dist < 0.22;
-      const opacity = show ? Math.max(0, Math.min(1, 1 - (dist - 0.03) / 0.1)) : 0;
+      const p      = getScrollProgress();
+      const cursor = Math.floor(Date.now() / 480) % 2 === 0 ? "▌" : "";
+      const isInt  = p >= SCROLL_END;
 
-      setVisible(show);
-
-      if (wrapperRef.current) {
-        wrapperRef.current.style.opacity = String(opacity);
-        wrapperRef.current.style.pointerEvents = opacity > 0.1 ? "auto" : "none";
+      // Scroll unlocks typing — time controls the actual speed
+      if (p >= SCROLL_START) {
+        if (startTime.current === null) startTime.current = Date.now();
+        const elapsed   = (Date.now() - startTime.current) / 1000;
+        const byTime    = Math.floor(elapsed * CHARS_PER_SEC);
+        const byScroll  = Math.floor(Math.max(0, Math.min(1, (p - SCROLL_START) / (SCROLL_END - SCROLL_START))) * TOTAL);
+        // Both conditions must be met: scroll far enough AND time passed
+        typedN.current  = Math.min(byTime, byScroll);
+      } else {
+        startTime.current = null;
+        typedN.current    = 0;
       }
+      const n = typedN.current;
+
+      // Only update DOM when char count changes
+      if (n !== prevN.current) {
+        prevN.current = n;
+        let consumed = 0;
+        for (let i = 0; i < TEXTS.length; i++) {
+          const text = TEXTS[i];
+          const vis  = Math.max(0, Math.min(text.length, n - consumed));
+          const el   = t.current[i];
+          if (el) {
+            const isActive = vis > 0 && vis < text.length;
+            el.textContent = text.substring(0, vis) + (isActive ? cursor : "");
+          }
+          consumed += text.length;
+        }
+      } else {
+        // Still update cursor blink even when chars aren't changing
+        let consumed = 0;
+        for (let i = 0; i < TEXTS.length; i++) {
+          const text = TEXTS[i];
+          const vis  = Math.max(0, Math.min(text.length, n - consumed));
+          const el   = t.current[i];
+          if (el && vis > 0 && vis < text.length) {
+            el.textContent = text.substring(0, vis) + cursor;
+          }
+          consumed += text.length;
+        }
+      }
+
+      if (isInt !== prevInt.current) {
+        prevInt.current = isInt;
+        setInteractive(isInt);
+      }
+
       rafRef.current = requestAnimationFrame(tick);
     }
     rafRef.current = requestAnimationFrame(tick);
@@ -32,202 +95,161 @@ export function ContactForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setStatus("sending");
-    await new Promise(r => setTimeout(r, 1200));
-    setStatus("sent");
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) throw new Error();
+      setStatus("sent");
+    } catch {
+      setStatus("idle");
+    }
   }
 
-  if (!visible && status === "idle") return null;
+  const setRef = (i: number) => (el: HTMLSpanElement | null) => { t.current[i] = el; };
 
   return (
-    <div
-      ref={wrapperRef}
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 50,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        opacity: 0,
-        pointerEvents: "none",
-      }}
-    >
-      {/* Panel — sized to visually match the 3D terminal body */}
-      <div style={{
-        width: "min(600px, 80vw)",
-        background: "rgba(1, 3, 2, 0.75)",
-        border: "1px solid rgba(0,255,136,0.18)",
-        backdropFilter: "blur(20px)",
-        padding: "44px 40px 36px",
-        position: "relative",
-        overflow: "hidden",
-      }}>
+    <div style={{
+      position: "fixed",
+      left:    "var(--term-left,   200%)",
+      top:     "var(--term-top,    200%)",
+      width:   "var(--term-width,  0%)",
+      height:  "var(--term-height, 0%)",
+      opacity: "var(--term-opacity, 0)" as unknown as number,
+      pointerEvents: interactive ? "auto" : "none",
+      zIndex: 50,
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "center",
+      padding: "4% 8%",
+      boxSizing: "border-box",
+      fontFamily: "monospace",
+      overflow: "hidden",
+    }}>
 
-        {/* Top scanline */}
-        <div style={{
-          position: "absolute", top: 0, left: 0, right: 0, height: "1px",
-          background: "linear-gradient(90deg, transparent 0%, #00FF88 50%, transparent 100%)",
-          opacity: 0.7,
-        }} />
-
-        {/* Header bar — mirrors the 3D panel header */}
-        <div style={{
-          position: "absolute", top: 0, left: 0, right: 0, height: "36px",
-          background: "rgba(0,255,136,0.04)",
-          borderBottom: "1px solid rgba(0,255,136,0.08)",
-          display: "flex", alignItems: "center", paddingLeft: 16,
-        }}>
-          <span style={{
-            fontFamily: "monospace", fontSize: 8, letterSpacing: "0.5em",
-            color: "rgba(0,255,136,0.4)",
-          }}>
-            TERMINAL_v1.0
-          </span>
-          {/* Dot indicators */}
-          <div style={{ marginLeft: "auto", marginRight: 16, display: "flex", gap: 6 }}>
-            {[0.15, 0.25, 0.4].map((op, i) => (
-              <div key={i} style={{
-                width: 6, height: 6, borderRadius: "50%",
-                background: `rgba(0,255,136,${op})`,
-              }} />
-            ))}
+      {status === "sent" ? (
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: "3vw", color: "#00FF88", marginBottom: "1vw" }}>✓</div>
+          <div style={{ fontSize: "0.9vw", letterSpacing: "0.4em", color: "#00FF88", marginBottom: "0.8vw" }}>
+            ÜBERTRAGUNG ERFOLGREICH
+          </div>
+          <div style={{ fontSize: "0.8vw", color: "rgba(255,255,255,0.3)", letterSpacing: "0.15em" }}>
+            Ich melde mich in Kürze.
           </div>
         </div>
-
-        {/* Content — offset for header */}
-        <div style={{ marginTop: 20 }}>
-          <div style={{ marginBottom: 28 }}>
-            <div style={{
-              fontFamily: "monospace", fontSize: 20, color: "#ffffff",
-              letterSpacing: "0.04em", fontWeight: 300, marginBottom: 4,
-            }}>
-              Starte ein Projekt.
+      ) : (
+        <>
+          {/* Header */}
+          <div style={{ marginBottom: "4%" }}>
+            <div style={{ fontSize: "0.65vw", letterSpacing: "0.5em", color: "rgba(0,255,136,0.5)", marginBottom: "1%" }}>
+              <span ref={setRef(0)} />
             </div>
-            <div style={{
-              fontFamily: "monospace", fontSize: 9, letterSpacing: "0.2em",
-              color: "rgba(255,255,255,0.22)",
-            }}>
-              Antwort meist innerhalb von 24h
+            <div style={{ fontSize: "2.2vw", color: "#ffffff", fontWeight: 300, letterSpacing: "0.03em", marginBottom: "0.5%" }}>
+              <span ref={setRef(1)} />
+            </div>
+            <div style={{ fontSize: "0.75vw", color: "rgba(255,255,255,0.22)", letterSpacing: "0.2em" }}>
+              <span ref={setRef(2)} />
             </div>
           </div>
 
-          {status === "sent" ? (
-            <div style={{ textAlign: "center", padding: "40px 0", fontFamily: "monospace" }}>
-              <div style={{ fontSize: 30, color: "#00FF88", marginBottom: 14 }}>✓</div>
-              <div style={{ fontSize: 10, letterSpacing: "0.4em", color: "#00FF88", marginBottom: 10 }}>
-                ÜBERTRAGUNG ERFOLGREICH
+          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "3%" }}>
+
+            <div style={{ display: "flex", gap: "4%" }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: "0.6vw", letterSpacing: "0.4em", color: "rgba(0,255,136,0.4)", marginBottom: "1%" }}>
+                  <span ref={setRef(3)} />
+                </div>
+                <input type="text" value={form.name} disabled={!interactive}
+                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                  placeholder={interactive ? "Dein Name" : ""}
+                  style={inputStyle(interactive)}
+                  onFocus={e => interactive && (e.target.style.borderBottomColor = "rgba(0,255,136,0.5)")}
+                  onBlur={e => (e.target.style.borderBottomColor = "rgba(255,255,255,0.12)")}
+                />
               </div>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", letterSpacing: "0.1em" }}>
-                Ich melde mich in Kürze.
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: "0.6vw", letterSpacing: "0.4em", color: "rgba(0,255,136,0.4)", marginBottom: "1%" }}>
+                  <span ref={setRef(4)} />
+                </div>
+                <input type="email" value={form.email} disabled={!interactive}
+                  onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                  placeholder={interactive ? "deine@email.de" : ""}
+                  style={inputStyle(interactive)}
+                  onFocus={e => interactive && (e.target.style.borderBottomColor = "rgba(0,255,136,0.5)")}
+                  onBlur={e => (e.target.style.borderBottomColor = "rgba(255,255,255,0.12)")}
+                />
               </div>
             </div>
-          ) : (
-            <form onSubmit={handleSubmit}>
-              <Field label="NAME" value={form.name}
-                onChange={v => setForm(f => ({ ...f, name: v }))}
-                placeholder="Dein Name" required />
-              <Field label="E-MAIL" type="email" value={form.email}
-                onChange={v => setForm(f => ({ ...f, email: v }))}
-                placeholder="deine@email.de" required />
-              <TextareaField label="NACHRICHT" value={form.message}
-                onChange={v => setForm(f => ({ ...f, message: v }))}
-                placeholder="Erzähl mir von deinem Projekt..." required />
 
-              <button type="submit" disabled={status === "sending"} style={{
-                marginTop: 28, width: "100%", padding: "13px 0",
-                background: "transparent", border: "1px solid rgba(0,255,136,0.35)",
-                color: "#00FF88", fontFamily: "monospace", fontSize: 10,
-                letterSpacing: "0.5em", cursor: status === "sending" ? "not-allowed" : "pointer",
-                opacity: status === "sending" ? 0.5 : 1, transition: "all 0.25s ease",
-              }}
-                onMouseEnter={e => {
-                  (e.currentTarget).style.background = "rgba(0,255,136,0.07)";
-                  (e.currentTarget).style.borderColor = "rgba(0,255,136,0.7)";
+            <div>
+              <div style={{ fontSize: "0.6vw", letterSpacing: "0.4em", color: "rgba(0,255,136,0.4)", marginBottom: "1%" }}>
+                <span ref={setRef(5)} />
+              </div>
+              <textarea value={form.message} disabled={!interactive} rows={3}
+                onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
+                placeholder={interactive ? "Erzähl mir von deinem Projekt..." : ""}
+                style={{ ...inputStyle(interactive), resize: "none", display: "block" }}
+                onFocus={e => interactive && (e.target.style.borderBottomColor = "rgba(0,255,136,0.5)")}
+                onBlur={e => (e.target.style.borderBottomColor = "rgba(255,255,255,0.12)")}
+              />
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "1%" }}>
+              <button type="submit" disabled={!interactive || status === "sending"}
+                style={{
+                  padding: "1% 4%", background: "transparent",
+                  border: `1px solid rgba(0,255,136,${interactive ? "0.4" : "0.12"})`,
+                  color: `rgba(0,255,136,${interactive ? "1" : "0.3"})`,
+                  fontSize: "0.7vw", letterSpacing: "0.5em",
+                  cursor: interactive ? "pointer" : "default",
+                  transition: "background 0.25s, border-color 0.25s, color 0.5s",
+                  fontFamily: "monospace",
                 }}
+                onMouseEnter={e => { if (interactive) {
+                  e.currentTarget.style.background  = "rgba(0,255,136,0.08)";
+                  e.currentTarget.style.borderColor = "rgba(0,255,136,0.8)";
+                }}}
                 onMouseLeave={e => {
-                  (e.currentTarget).style.background = "transparent";
-                  (e.currentTarget).style.borderColor = "rgba(0,255,136,0.35)";
+                  e.currentTarget.style.background  = "transparent";
+                  e.currentTarget.style.borderColor = `rgba(0,255,136,${interactive ? "0.4" : "0.12"})`;
                 }}
               >
-                {status === "sending" ? "ÜBERTRAGUNG..." : "NACHRICHT SENDEN"}
+                <span ref={setRef(6)} />
               </button>
 
-              <div style={{
-                marginTop: 20, display: "flex", justifyContent: "center", gap: 28,
-                fontFamily: "monospace", fontSize: 8, letterSpacing: "0.3em",
-                color: "rgba(255,255,255,0.18)",
-              }}>
+              <div style={{ display: "flex", gap: "1.5vw", fontSize: "0.6vw", letterSpacing: "0.3em",
+                color: `rgba(255,255,255,${interactive ? "0.18" : "0.06"})`, transition: "color 0.5s" }}>
                 <a href="https://instagram.com/df.webdesign" target="_blank" rel="noopener noreferrer"
                   style={{ color: "inherit", textDecoration: "none" }}
-                  onMouseEnter={e => (e.currentTarget.style.color = "rgba(0,255,136,0.6)")}
-                  onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.18)")}>
-                  INSTAGRAM
+                  onMouseEnter={e => interactive && (e.currentTarget.style.color = "rgba(0,255,136,0.6)")}
+                  onMouseLeave={e => (e.currentTarget.style.color = `rgba(255,255,255,${interactive ? "0.18" : "0.06"})`)}>
+                  <span ref={setRef(7)} />
                 </a>
                 <a href="https://www.linkedin.com/in/felix-dahm-web/" target="_blank" rel="noopener noreferrer"
                   style={{ color: "inherit", textDecoration: "none" }}
-                  onMouseEnter={e => (e.currentTarget.style.color = "rgba(0,255,136,0.6)")}
-                  onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.18)")}>
-                  LINKEDIN
+                  onMouseEnter={e => interactive && (e.currentTarget.style.color = "rgba(0,255,136,0.6)")}
+                  onMouseLeave={e => (e.currentTarget.style.color = `rgba(255,255,255,${interactive ? "0.18" : "0.06"})`)}>
+                  <span ref={setRef(8)} />
                 </a>
               </div>
-            </form>
-          )}
-        </div>
-
-        {/* Bottom scanline */}
-        <div style={{
-          position: "absolute", bottom: 0, left: 0, right: 0, height: "1px",
-          background: "linear-gradient(90deg, transparent, rgba(0,255,136,0.25), transparent)",
-        }} />
-      </div>
+            </div>
+          </form>
+        </>
+      )}
     </div>
   );
 }
 
-function Field({ label, value, onChange, placeholder, type = "text", required }: {
-  label: string; value: string; onChange: (v: string) => void;
-  placeholder: string; type?: string; required?: boolean;
-}) {
-  return (
-    <div style={{ marginBottom: 20 }}>
-      <div style={{ fontFamily: "monospace", fontSize: 8, letterSpacing: "0.4em", color: "#00FF88", opacity: 0.45, marginBottom: 7 }}>
-        {label}
-      </div>
-      <input type={type} value={value} onChange={e => onChange(e.target.value)}
-        placeholder={placeholder} required={required}
-        style={{
-          width: "100%", background: "transparent", border: "none",
-          borderBottom: "1px solid rgba(255,255,255,0.1)", color: "#ffffff",
-          fontFamily: "monospace", fontSize: 13, padding: "7px 0", outline: "none",
-          caretColor: "#00FF88", boxSizing: "border-box",
-        }}
-        onFocus={e => (e.target.style.borderBottomColor = "rgba(0,255,136,0.5)")}
-        onBlur={e =>  (e.target.style.borderBottomColor = "rgba(255,255,255,0.1)")}
-      />
-    </div>
-  );
-}
-
-function TextareaField({ label, value, onChange, placeholder, required }: {
-  label: string; value: string; onChange: (v: string) => void;
-  placeholder: string; required?: boolean;
-}) {
-  return (
-    <div style={{ marginBottom: 4 }}>
-      <div style={{ fontFamily: "monospace", fontSize: 8, letterSpacing: "0.4em", color: "#00FF88", opacity: 0.45, marginBottom: 7 }}>
-        {label}
-      </div>
-      <textarea value={value} onChange={e => onChange(e.target.value)}
-        placeholder={placeholder} required={required} rows={3}
-        style={{
-          width: "100%", background: "transparent", border: "none",
-          borderBottom: "1px solid rgba(255,255,255,0.1)", color: "#ffffff",
-          fontFamily: "monospace", fontSize: 13, padding: "7px 0", outline: "none",
-          resize: "none", caretColor: "#00FF88", boxSizing: "border-box",
-        }}
-        onFocus={e => (e.target.style.borderBottomColor = "rgba(0,255,136,0.5)")}
-        onBlur={e =>  (e.target.style.borderBottomColor = "rgba(255,255,255,0.1)")}
-      />
-    </div>
-  );
+function inputStyle(interactive: boolean): React.CSSProperties {
+  return {
+    width: "100%", background: "transparent", border: "none",
+    borderBottom: "1px solid rgba(255,255,255,0.12)", color: "#ffffff",
+    fontSize: "1vw", padding: "1% 0", outline: "none",
+    caretColor: "#00FF88", boxSizing: "border-box", fontFamily: "monospace",
+    cursor: interactive ? "text" : "default",
+    opacity: interactive ? 1 : 0.4,
+    transition: "opacity 0.4s ease",
+  };
 }

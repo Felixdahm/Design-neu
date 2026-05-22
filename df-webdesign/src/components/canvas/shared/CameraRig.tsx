@@ -15,7 +15,7 @@ export function CameraRig() {
   useFrame((_, delta) => {
     driftT.current += delta;
 
-    const progress = getScrollProgress();
+    const progress = Math.min(getScrollProgress(), 0.87);
     const state = getCameraState(progress);
 
     // Organic drift — gives the camera life when stationary
