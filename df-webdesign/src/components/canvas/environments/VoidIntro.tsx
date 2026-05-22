@@ -55,7 +55,7 @@ function LogoVideo() {
 
   const { texture, video } = useMemo(() => {
     const video = document.createElement("video");
-    video.src         = "/df-logo-spin.mp4";
+    video.src         = "/Logo rotation.mp4";
     video.autoplay    = true;
     video.muted       = true;
     video.loop        = true;

@@ -49,36 +49,30 @@ export function ContactTerminal() {
     time.current += delta;
     if (!groupRef.current) return;
     const p = getScrollProgress();
-    groupRef.current.visible = Math.abs(p - 0.88) < 0.18;
+    groupRef.current.visible = Math.abs(p - 0.88) < 0.22;
     if (cursorRef.current) cursorRef.current.visible = Math.sin(time.current * 3) > 0;
   });
 
   return (
     <group ref={groupRef} position={[0, 0, ENVIRONMENTS.terminal.z]}>
-      {/* Terminal body */}
       <RoundedBox args={[9, 5.5, 0.08]} radius={0.1} smoothness={4} position={[0, 0, -0.5]}>
         <primitive object={bodyMat} attach="material" />
       </RoundedBox>
-      {/* Wireframe border */}
       <RoundedBox args={[9.1, 5.6, 0.08]} radius={0.1} smoothness={4} position={[0, 0, -0.52]}>
         <primitive object={borderMat} attach="material" />
       </RoundedBox>
-      {/* Header bar */}
       <mesh position={[0, 2.45, -0.44]}>
         <boxGeometry args={[9, 0.4, 0.02]} />
         <primitive object={headerMat} attach="material" />
       </mesh>
-      {/* Scanline (top glow) */}
       <mesh position={[0, 2.44, -0.43]}>
         <boxGeometry args={[9, 0.003, 0.01]} />
         <primitive object={scanlineMat} attach="material" />
       </mesh>
-      {/* Blinking cursor */}
       <mesh ref={cursorRef} position={[-3.8, -0.3, -0.42]}>
         <boxGeometry args={[0.12, 0.18, 0.01]} />
         <meshStandardMaterial color="#000" emissive={THREE_COLORS.terminal} emissiveIntensity={4} />
       </mesh>
-
       <pointLight position={[0, 3, 2]}   color={THREE_COLORS.terminal}   intensity={12} distance={20} decay={2} />
       <pointLight position={[0, -3, -1]} color={THREE_COLORS.accentBlue} intensity={4}  distance={15} decay={2} />
     </group>
