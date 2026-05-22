@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+:root {
+  --background: #000000;
+  --foreground: #ffffff;
+  --accent-blue: #4FC3F7;
+  --accent-glow: #0D47A1;
+  --hologram: #00E5FF;
+  --terminal: #00FF88;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-mono: var(--font-mono);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  background: #000000;
+  /* Prevent flash of white during hydration */
+  color-scheme: dark;
+}
+
+body {
+  background: #000000;
+  color: #ffffff;
+  font-family: var(--font-mono), "Courier New", monospace;
+  overflow-x: hidden;
+  /* Prevent rubber-band scroll fighting with Lenis */
+  overscroll-behavior: none;
+}
+
+/* Remove default scrollbar — Lenis owns scroll */
+::-webkit-scrollbar {
+  display: none;
+}
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+/* Prevent selection on 3D canvas interactions */
+canvas {
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+/* Cinematic text rendering */
+h1, h2, h3, h4 {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Selection color */
+::selection {
+  background: rgba(79, 195, 247, 0.2);
+  color: #ffffff;
+}
