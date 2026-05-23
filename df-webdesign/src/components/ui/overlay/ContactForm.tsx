@@ -15,10 +15,11 @@ const TEXTS = [
   "LINKEDIN",
 ];
 
-const TOTAL         = TEXTS.reduce((s, t) => s + t.length, 0);
-const SCROLL_START  = 0.74;
-const SCROLL_END    = 0.97;
-const CHARS_PER_SEC = 28;
+const TOTAL          = TEXTS.reduce((s, t) => s + t.length, 0);
+const SCROLL_START   = 0.77;
+const SCROLL_END     = 1.00;  // typing completes at the very last scroll position
+const INTERACTIVE_AT = 0.95;  // form becomes interactive slightly before the end
+const CHARS_PER_SEC  = 110;   // fast typewriter — all chars done in ~1 second
 
 const INK   = "#0a0a1f";
 const INK40 = "rgba(10,10,31,0.4)";
@@ -41,7 +42,7 @@ export function ContactForm() {
     function tick() {
       const p      = getScrollProgress();
       const cursor = Math.floor(Date.now() / 480) % 2 === 0 ? "▌" : "";
-      const isInt  = p >= SCROLL_END;
+      const isInt  = p >= INTERACTIVE_AT;
 
       if (p >= SCROLL_START) {
         if (startTime.current === null) startTime.current = Date.now();

@@ -20,10 +20,12 @@ export function scrollToProgress(progress: number) {
   _lenis.scrollTo(progress * max, { duration: 2.0 });
 }
 
-// ── Planet snap points (scroll progress values) ───────────────────────────────
-const PLANET_SNAPS  = [0.27, 0.32, 0.37, 0.42, 0.47] as const;
-const SNAP_ZONE_IN  = 0.22;  // progress at which we enter the snap zone
-const SNAP_ZONE_OUT = 0.50;  // progress at which we leave the snap zone
+// ── Snap zones ────────────────────────────────────────────────────────────────
+const PLANET_SNAPS    = [0.27, 0.32, 0.37, 0.42, 0.47] as const;
+const SNAP_ZONE_IN    = 0.22;  // planet zone entry
+const SNAP_ZONE_OUT   = 0.50;  // planet zone exit
+const PROZESS_ZONE_IN = 0.60;  // from here a single scroll down jumps to contact
+const PROZESS_ZONE_OUT= 0.88;  // above this = already in/past terminal, free scroll
 
 export function useLenis() {
   const rafRef = useRef<number>(0);
@@ -54,19 +56,19 @@ export function useLenis() {
     let snapIdx  = -1;   // which planet we're currently stopped at (-1 = not snapped)
     let snapping = false; // true while a snap animation is in progress
 
-    function doSnap(targetProgress: number) {
+    function doSnap(targetProgress: number, duration = 1.2) {
       snapping = true;
-      lenis.stop();  // block user input while animating
+      lenis.stop();
       const max = document.documentElement.scrollHeight - window.innerHeight;
       (lenis.scrollTo as Function)(targetProgress * max, {
-        duration: 1.2,
+        duration,
         easing: (t: number) => 1 - Math.pow(1 - t, 3),
-        force: true,  // works even when lenis.stop() is active
+        force: true,
       });
       setTimeout(() => {
         lenis.start();
         snapping = false;
-      }, 1500);
+      }, duration * 1000 + 300);
     }
 
     function onSnapWheel(e: WheelEvent) {
@@ -77,6 +79,13 @@ export function useLenis() {
       if (dir < 0) {
         if (snapping) { lenis.start(); snapping = false; }
         snapIdx = -1;
+        return;
+      }
+
+      // ── Prozess → Contact jump ───────────────────────────────────────────
+      if (p >= PROZESS_ZONE_IN && p < PROZESS_ZONE_OUT) {
+        e.preventDefault();
+        if (!snapping) doSnap(1.0, 2.0);  // cinematic long jump
         return;
       }
 
