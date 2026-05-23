@@ -7,7 +7,6 @@ export function BackgroundVideo() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const rafRef = useRef<number>(0);
-  const smoothTime = useRef(0);
   const isSeeking = useRef(false);
   const lastSeekTime = useRef(-1);
 
@@ -53,19 +52,14 @@ export function BackgroundVideo() {
       }
     }
 
-    let lastTimestamp = 0;
-
-    function tick(timestamp: number) {
-      const delta = Math.min((timestamp - lastTimestamp) / 1000, 0.05);
-      lastTimestamp = timestamp;
-
-      if (v!.readyState >= 2 && v!.duration && delta > 0) {
+    function tick() {
+      if (v!.readyState >= 2 && v!.duration) {
+        // Lenis already smooths scroll progress — no extra lerp needed
         const targetTime = getScrollProgress() * v!.duration;
-        smoothTime.current += (targetTime - smoothTime.current) * Math.min(delta * 5, 1);
-
-        const diff = Math.abs(smoothTime.current - lastSeekTime.current);
-        if (diff > 0.033 && !isSeeking.current) {
-          seekTo(smoothTime.current);
+        const diff = Math.abs(targetTime - lastSeekTime.current);
+        // Seek every ~1 frame of video (16ms at 60fps) for maximum smoothness
+        if (diff > 0.016 && !isSeeking.current) {
+          seekTo(targetTime);
         }
       }
 

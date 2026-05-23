@@ -1,63 +1,143 @@
 "use client";
 
-import { useRef, useMemo } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useRef, useEffect, useCallback, useState } from "react";
+import { useFrame, useLoader } from "@react-three/fiber";
+import { Select } from "@react-three/postprocessing";
 import * as THREE from "three";
 import { ENVIRONMENTS, THREE_COLORS } from "@/config/world.config";
-import { getScrollProgress } from "@/hooks/useLenis";
+import { getScrollProgress, getIsScrolling } from "@/hooks/useLenis";
+import { setHoveredProject, type HoveredProject } from "@/lib/portfolioState";
 
-const SCREENS = [
-  { pos: [-4.5, 0.5, 0]   as [number,number,number], rot: [0, 0.35, 0] as [number,number,number] },
-  { pos: [0,    1.2, -2]  as [number,number,number], rot: [0, 0,    0] as [number,number,number] },
-  { pos: [4.5,  0,  -0.5] as [number,number,number], rot: [0,-0.35, 0] as [number,number,number] },
-  { pos: [-2.5,-1.8, -5]  as [number,number,number], rot: [0, 0.2,  0.04] as [number,number,number] },
-  { pos: [2.5,  2.2, -4]  as [number,number,number], rot: [0.04,-0.2, 0] as [number,number,number] },
+const PORTFOLIO_CENTER = 0.5;
+
+export const PORTFOLIO_PROJECTS: {
+  pos: [number, number, number];
+  rot: [number, number, number];
+  image: string;
+  project: HoveredProject;
+}[] = [
+  {
+    pos:   [-2.4, 0, 0.2],
+    rot:   [0,  0.18, 0],
+    image: "/img_5.png",
+    project: {
+      name:   "LEADPILOT",
+      client: "KI-Erklärfilme.de",
+      desc:   "AI-produzierte Erklärvideos\ndie Aufmerksamkeit erzeugen",
+      url:    "www.ki-erklärfilme.de",
+    },
+  },
+  {
+    pos:   [ 2.4, 0, 0.2],
+    rot:   [0, -0.18, 0],
+    image: "/img_6.png",
+    project: {
+      name:   "CRONOS",
+      client: "Cronos Memmingen",
+      desc:   "Personalvermittlung &\nKarriereberatung in Memmingen",
+      url:    "cronos-memmingen.de",
+    },
+  },
 ];
 
-function Screen({ pos, rot, index }: { pos: [number,number,number]; rot: [number,number,number]; index: number }) {
-  const groupRef = useRef<THREE.Group>(null);
-  const time = useRef(Math.random() * Math.PI * 2);
+function PortfolioScreen({
+  pos, rot, image, project,
+}: {
+  pos: [number, number, number];
+  rot: [number, number, number];
+  image: string;
+  project: HoveredProject;
+}) {
+  const groupRef    = useRef<THREE.Group>(null);
+  const hovered     = useRef(false);
+  const [isHovered, setIsHovered] = useState(false);
 
-  const screenMat = useMemo(() => new THREE.MeshStandardMaterial({
-    color: new THREE.Color(0x020210),
-    emissive: THREE_COLORS.glowBlue,
-    emissiveIntensity: 0.5,
-    transparent: true,
-    opacity: 0.92,
-  }), []);
+  const texture = useLoader(THREE.TextureLoader, image);
+  useEffect(() => {
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.minFilter  = THREE.LinearFilter;
+    texture.magFilter  = THREE.LinearFilter;
+  }, [texture]);
 
-  const frameMat = useMemo(() => new THREE.MeshStandardMaterial({
+  const frameMat = useRef(new THREE.MeshStandardMaterial({
     color: "#000",
     emissive: THREE_COLORS.accentBlue,
-    emissiveIntensity: 1.0,
+    emissiveIntensity: 1.2,
     transparent: true,
-    opacity: 0.7,
-  }), []);
+    opacity: 0.8,
+  }));
 
-  useFrame((_, delta) => {
-    time.current += delta;
+  const onEnter = useCallback(() => {
+    if (getIsScrolling()) return;
+    if (Math.abs(getScrollProgress() - PORTFOLIO_CENTER) >= 0.16) return;
+    hovered.current = true;
+    setIsHovered(true);
+    setHoveredProject(project);
+    document.body.style.cursor = "pointer";
+  }, [project]);
+
+  const onLeave = useCallback(() => {
+    hovered.current = false;
+    setIsHovered(false);
+    setHoveredProject(null);
+    document.body.style.cursor = "default";
+  }, []);
+
+  const onClick = useCallback(() => {
+    if (!hovered.current || !project?.url) return;
+    window.open(`https://${project.url}`, "_blank", "noopener,noreferrer");
+  }, [project]);
+
+  useFrame(() => {
     if (!groupRef.current) return;
-    groupRef.current.position.y = pos[1] + Math.sin(time.current * 0.2) * 0.1;
-    groupRef.current.rotation.y = rot[1] + Math.sin(time.current * 0.12) * 0.04;
+    const inView = Math.abs(getScrollProgress() - PORTFOLIO_CENTER) < 0.16;
+
+    // Clear hover when the section scrolls out of view (onPointerLeave won't fire on hidden meshes)
+    if (!inView && hovered.current) {
+      hovered.current = false;
+      setIsHovered(false);
+      setHoveredProject(null);
+      document.body.style.cursor = "default";
+    }
+
+    const targetScale = (inView && hovered.current) ? 1.06 : 1.0;
+    const cur         = groupRef.current.scale.x;
+    groupRef.current.scale.setScalar(cur + (targetScale - cur) * 0.08);
   });
 
   return (
     <group ref={groupRef} position={pos} rotation={rot}>
-      {/* Screen surface */}
-      <mesh>
-        <planeGeometry args={[3.8, 2.3]} />
-        <primitive object={screenMat} attach="material" />
+      {/* On hover: Select excludes this mesh from bloom → original colors show */}
+      <Select enabled={isHovered}>
+        <mesh onPointerEnter={onEnter} onPointerLeave={onLeave} onClick={onClick}>
+          <planeGeometry args={[3.5, 2.25]} />
+          <meshBasicMaterial
+            map={texture}
+            toneMapped={false}
+            polygonOffset
+            polygonOffsetFactor={-1}
+            polygonOffsetUnits={-1}
+          />
+        </mesh>
+      </Select>
+
+      {/* Frame, glow line, dots — NOT in Select → they keep their bloom */}
+      <mesh position={[0, 0, -0.04]} raycast={() => undefined}>
+        <boxGeometry args={[3.7, 2.42, 0.04]} />
+        <primitive object={frameMat.current} attach="material" />
       </mesh>
-      {/* Frame border */}
-      <mesh position={[0, 0, -0.02]}>
-        <boxGeometry args={[4.0, 2.45, 0.04]} />
-        <primitive object={frameMat} attach="material" />
+
+      <mesh position={[0, -1.12, 0.01]} raycast={() => undefined}>
+        <boxGeometry args={[3.5, 0.003, 0.01]} />
+        <meshStandardMaterial color="#000" emissive={THREE_COLORS.accentBlue} emissiveIntensity={2.5} />
       </mesh>
-      {/* Screen glow line at bottom */}
-      <mesh position={[0, -1.12, 0.01]}>
-        <boxGeometry args={[3.8, 0.003, 0.01]} />
-        <meshStandardMaterial color="#000" emissive={THREE_COLORS.accentBlue} emissiveIntensity={4} />
-      </mesh>
+
+      {([[-1.7, 1.1], [1.7, 1.1], [-1.7, -1.1], [1.7, -1.1]] as [number,number][]).map(([cx, cy], i) => (
+        <mesh key={i} position={[cx, cy, 0.01]} raycast={() => undefined}>
+          <circleGeometry args={[0.016, 12]} />
+          <meshStandardMaterial color="#000" emissive={THREE_COLORS.accentBlue} emissiveIntensity={2.0} />
+        </mesh>
+      ))}
     </group>
   );
 }
@@ -67,17 +147,16 @@ export function PortfolioSpace() {
 
   useFrame(() => {
     if (!groupRef.current) return;
-    const p = getScrollProgress();
-    groupRef.current.visible = Math.abs(p - 0.5) < 0.18;
+    groupRef.current.visible = Math.abs(getScrollProgress() - PORTFOLIO_CENTER) < 0.18;
   });
 
   return (
     <group ref={groupRef} position={[0, 0, ENVIRONMENTS.portfolio.z]}>
-      {SCREENS.map((s, i) => (
-        <Screen key={i} pos={s.pos} rot={s.rot} index={i} />
+      {PORTFOLIO_PROJECTS.map((s, i) => (
+        <PortfolioScreen key={i} {...s} />
       ))}
-      <pointLight position={[0, 4, 4]}  color={THREE_COLORS.accentBlue} intensity={10} distance={25} decay={2} />
-      <pointLight position={[0, -3, 2]} color={THREE_COLORS.glowBlue}   intensity={4}  distance={18} decay={2} />
+      <pointLight position={[0, 4, 4]}  color={THREE_COLORS.accentBlue} intensity={12} distance={25} decay={2} />
+      <pointLight position={[0, -3, 2]} color={THREE_COLORS.glowBlue}   intensity={5}  distance={18} decay={2} />
     </group>
   );
 }

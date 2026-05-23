@@ -2,6 +2,7 @@
 
 import { Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
+import { Selection } from "@react-three/postprocessing";
 import { CameraRig } from "./shared/CameraRig";
 import { ParticleField } from "./shared/ParticleField";
 import { DynamicLighting } from "./shared/DynamicLighting";
@@ -29,42 +30,46 @@ export function WorldScene() {
         dpr={[1, 1.5]}
         onCreated={({ gl }) => gl.setClearColor(0x000000, 0)} // Alpha 0 = fully transparent bg
       >
-        {/* Fog fades 3D objects into the video background — no hard edges */}
-        <fog attach="fog" args={["#000008", FOG.near, FOG.far]} />
-        <ambientLight intensity={0.08} color="#0a0a18" />
+        {/* Selection context — used by SelectiveBloom (inverted) in PostProcessing.
+            Any mesh wrapped in <Select enabled> is excluded from bloom. */}
+        <Selection>
+          {/* Fog fades 3D objects into the video background — no hard edges */}
+          <fog attach="fog" args={["#000008", FOG.near, FOG.far]} />
+          <ambientLight intensity={0.08} color="#0a0a18" />
 
-        {/* Camera + lights — no Suspense, no async deps */}
-        <CameraRig />
-        <DynamicLighting />
+          {/* Camera + lights — no Suspense, no async deps */}
+          <CameraRig />
+          <DynamicLighting />
 
-        {/* Particles — own Suspense so it can't block anything */}
-        <Suspense fallback={null}>
-          <ParticleField />
-        </Suspense>
+          {/* Particles — own Suspense so it can't block anything */}
+          <Suspense fallback={null}>
+            <ParticleField />
+          </Suspense>
 
-        {/* VoidIntro — NO Suspense wrapper. Uses only primitives + video.
-            This MUST render even if fonts are loading elsewhere. */}
-        <VoidIntro />
+          {/* VoidIntro — NO Suspense wrapper. Uses only primitives + video.
+              This MUST render even if fonts are loading elsewhere. */}
+          <VoidIntro />
 
-        {/* Remaining environments — each has its own Suspense boundary.
-            If one suspends (font load), others are unaffected. */}
-        <Suspense fallback={null}>
-          <ServicesWorld />
-        </Suspense>
-        <Suspense fallback={null}>
-          <PortfolioSpace />
-        </Suspense>
-        <Suspense fallback={null}>
-          <AILab />
-        </Suspense>
-        <Suspense fallback={null}>
-          <ContactTerminal />
-        </Suspense>
+          {/* Remaining environments — each has its own Suspense boundary.
+              If one suspends (font load), others are unaffected. */}
+          <Suspense fallback={null}>
+            <ServicesWorld />
+          </Suspense>
+          <Suspense fallback={null}>
+            <PortfolioSpace />
+          </Suspense>
+          <Suspense fallback={null}>
+            <AILab />
+          </Suspense>
+          <Suspense fallback={null}>
+            <ContactTerminal />
+          </Suspense>
 
-        {/* PostProcessing — always last, runs on the final composited frame */}
-        <Suspense fallback={null}>
-          <PostProcessing />
-        </Suspense>
+          {/* PostProcessing — always last, runs on the final composited frame */}
+          <Suspense fallback={null}>
+            <PostProcessing />
+          </Suspense>
+        </Selection>
       </Canvas>
     </div>
   );

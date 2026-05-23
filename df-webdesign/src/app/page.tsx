@@ -5,6 +5,8 @@ import { useLenis } from "@/hooks/useLenis";
 import { LoadingScreen } from "@/components/ui/overlay/LoadingScreen";
 import { Navigation } from "@/components/ui/overlay/Navigation";
 import { ContactForm } from "@/components/ui/overlay/ContactForm";
+import { SectionTitle } from "@/components/ui/overlay/SectionTitle";
+import { PortfolioInfo } from "@/components/ui/overlay/PortfolioInfo";
 import { ScrollProgress } from "@/components/ui/overlay/ScrollProgress";
 import { BackgroundVideo } from "@/components/ui/overlay/BackgroundVideo";
 import { SCROLL_HEIGHT_VH } from "@/config/world.config";
@@ -34,6 +36,8 @@ export default function Home() {
       {/* z:50+ — UI overlays */}
       <Navigation />
       <ScrollProgress />
+      <SectionTitle />
+      <PortfolioInfo />
       <ContactForm />
       <LoadingScreen />
     </div>

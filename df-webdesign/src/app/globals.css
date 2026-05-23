@@ -65,3 +65,13 @@ h1, h2, h3, h4 {
   background: rgba(79, 195, 247, 0.2);
   color: #ffffff;
 }
+
+/* Section title animations */
+@keyframes sectionIn {
+  from { opacity: 0; transform: translateX(-28px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes sectionOut {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(-20px); }
+}

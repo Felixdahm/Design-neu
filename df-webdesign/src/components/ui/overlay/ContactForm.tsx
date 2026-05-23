@@ -5,9 +5,9 @@ import { getScrollProgress } from "@/hooks/useLenis";
 
 // All text that gets typed out in order
 const TEXTS = [
-  "TERMINAL_v1.0 — CONTACT",
-  "Starte ein Projekt.",
-  "Antwort meist innerhalb von 24h",
+  "DF WEBDESIGN — KONTAKT",
+  "Lass uns dein Projekt starten.",
+  "Antwort garantiert innerhalb von 24h",
   "NAME",
   "E-MAIL",
   "NACHRICHT",
