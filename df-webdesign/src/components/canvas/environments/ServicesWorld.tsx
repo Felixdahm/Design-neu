@@ -18,10 +18,10 @@ const SERVICES: {
   textureUrl: string | null;
   brightness: number;
   ringColor: string;
-  textLeft?: boolean;
+  textAbove?: boolean;
 }[] = [
   {
-    x:  ORBIT_R, y:  0,     z:  0,    delay: 0,
+    x:  ORBIT_R, y:  0,     z:   0,   delay: 0,
     num: "01", title: "KOSTENLOSER\nPROTOTYP VORAB",
     desc: "Sieh dein Design bevor\ndu einen Cent zahlst",
     textureUrl: "/planets/planet-seo.jpg",
@@ -29,33 +29,33 @@ const SERVICES: {
     ringColor: "#00FF88",
   },
   {
-    x:  0.68,    y:  2.09,  z: -1.2,  delay: 0.12,
+    x:  0.68,    y:  2.09,  z:  -2.0, delay: 0.12,
     num: "02", title: "ZAHLUNG NACH\nABNAHME",
     desc: "Keine Anzahlung —\nerst zahlen bei Zufriedenheit",
     textureUrl: "/planets/planet-webdesign.jpg",
     brightness: 1.2,
     ringColor: "#4FC3F7",
+    textAbove: true,
   },
   {
-    x: -1.78,    y:  1.30,  z: -2.4,  delay: 0.24,
+    x: -1.78,    y:  1.30,  z:  -4.0, delay: 0.24,
     num: "03", title: "EIGENES\nBEARBEITUNGS-TOOL",
     desc: "Inklusive — kein fremdes\nCMS, keine Folgekosten",
     textureUrl: "/planets/planet-backend.jpg",
     brightness: 3.5,
     ringColor: "#4FC3F7",
-    textLeft: true,
+    textAbove: true,
   },
   {
-    x: -1.78,    y: -1.30,  z: -3.6,  delay: 0.36,
+    x: -1.78,    y: -1.30,  z:  -6.0, delay: 0.36,
     num: "04", title: "100% TRANSPARENT\n& UPDATES",
     desc: "Regelmäßige Updates\nwährend der Entwicklung",
     textureUrl: "/planets/planet-chatbot.jpg",
     brightness: 3.5,
     ringColor: "#00E5FF",
-    textLeft: true,
   },
   {
-    x:  0.68,    y: -2.09,  z: -4.8,  delay: 0.48,
+    x:  0.68,    y: -2.09,  z:  -8.0, delay: 0.48,
     num: "05", title: "PERSÖNLICHE\nWARTUNG",
     desc: "Kein Stundensatz —\nimmer ein direkter Ansprechpartner",
     textureUrl: "/planets/planet-uiux.jpg",
@@ -113,7 +113,7 @@ function FallbackSphereMesh({ ringColor }: { ringColor: string }) {
 }
 
 // ── Planet ────────────────────────────────────────────────────────────────────
-function Planet({ x, y, z, delay, num, title, desc, textureUrl, brightness, ringColor, textLeft }: typeof SERVICES[number]) {
+function Planet({ x, y, z, delay, num, title, desc, textureUrl, brightness, ringColor, textAbove }: typeof SERVICES[number]) {
   const groupRef = useRef<THREE.Group>(null);
   const time     = useRef(0);
 
@@ -135,10 +135,12 @@ function Planet({ x, y, z, delay, num, title, desc, textureUrl, brightness, ring
     groupRef.current.rotation.y = Math.sin(time.current * 0.09 + phase) * 0.06;
   });
 
-  // Text centered below the planet — always fully visible when camera faces the planet
-  const TEXT_Y_NUM  = -1.30;
-  const TEXT_Y_TITLE = -1.52;
-  const TEXT_Y_DESC  = -1.88;
+  // For "above": title at top (grows up), desc below title (grows down), num closest to planet
+  // For "below": num closest to planet, title next, desc furthest (grows down)
+  const TEXT_Y_NUM   = textAbove ?  1.18 : -1.30;
+  const TEXT_Y_DESC  = textAbove ?  1.58 : -1.88;
+  const TEXT_Y_TITLE = textAbove ?  2.08 : -1.52;
+  const CONN_Y       = textAbove ?  1.00 : -1.10;
 
   return (
     <group ref={groupRef} position={[x, y, z]}>
@@ -167,8 +169,8 @@ function Planet({ x, y, z, delay, num, title, desc, textureUrl, brightness, ring
       {/* Glow */}
       <pointLight color={ringColor} intensity={2.8} distance={5.5} decay={2} />
 
-      {/* Connector — short vertical line from sphere bottom to text */}
-      <mesh position={[0, -1.10, 0.85]} raycast={() => undefined}>
+      {/* Connector — short vertical line between sphere and text */}
+      <mesh position={[0, CONN_Y, 0.85]} raycast={() => undefined}>
         <boxGeometry args={[0.0014, 0.22, 0.001]} />
         <meshStandardMaterial color="#000" emissive={new THREE.Color(ringColor)}
           emissiveIntensity={1.4} transparent opacity={0.38} />
@@ -178,12 +180,14 @@ function Planet({ x, y, z, delay, num, title, desc, textureUrl, brightness, ring
         fontSize={0.088} color={ringColor} fillOpacity={0.85} letterSpacing={0.12} font={undefined}>
         {num}
       </Text>
-      <Text position={[0, TEXT_Y_TITLE, 0.85]} anchorX="center" anchorY="middle"
+      <Text position={[0, TEXT_Y_TITLE, 0.85]} anchorX="center"
+        anchorY={textAbove ? "bottom" : "middle"}
         fontSize={0.138} color="#ffffff" fillOpacity={0.95} letterSpacing={0.06}
         lineHeight={1.4} font={undefined}>
         {title}
       </Text>
-      <Text position={[0, TEXT_Y_DESC, 0.85]} anchorX="center" anchorY="top"
+      <Text position={[0, TEXT_Y_DESC, 0.85]} anchorX="center"
+        anchorY={textAbove ? "top" : "top"}
         fontSize={0.09} color="#ffffff" fillOpacity={0.72} lineHeight={1.65}
         letterSpacing={0.04} font={undefined}>
         {desc}

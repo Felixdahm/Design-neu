@@ -15,12 +15,12 @@ export const CAMERA_KEYFRAMES = [
 
   // SERVICES — overview shot, then camera follows the helix to each planet
   // Planet world positions = env(-12) + local. Camera 4.5 units in front of each.
-  { progress: 0.22, pos: [ 0,    2.5,  -4  ],  target: [ 0,    0,    -14  ] }, // OVERVIEW — full solar system
-  { progress: 0.27, pos: [ 2.2,  0,    -7.5],  target: [ 2.2,  0,    -12  ] }, // P1 SEO
-  { progress: 0.32, pos: [ 0.68, 2.09, -8.7],  target: [ 0.68, 2.09, -13.2] }, // P2 WEBDESIGN
-  { progress: 0.37, pos: [-1.78, 1.30, -9.9],  target: [-1.78, 1.30, -14.4] }, // P3 BACKEND
-  { progress: 0.42, pos: [-1.78,-1.30,-11.1],  target: [-1.78,-1.30, -15.6] }, // P4 CHATBOT
-  { progress: 0.47, pos: [ 0.68,-2.09,-12.3],  target: [ 0.68,-2.09, -16.8] }, // P5 UI/UX
+  { progress: 0.22, pos: [ 0,    2.5,  -4  ],  target: [ 0,    0,    -18  ] }, // OVERVIEW — full solar system
+  { progress: 0.27, pos: [ 2.2,  -0.6, -7.5],  target: [ 2.2,  -0.9, -12  ] }, // P1 SEO       (text below → cam shifted down)
+  { progress: 0.32, pos: [ 0.68, 1.6,  -9.5],  target: [ 0.68, 3.1,  -14  ] }, // P2 WEBDESIGN (text above)
+  { progress: 0.37, pos: [-1.78, 0.7,  -11.5], target: [-1.78, 2.4,  -16  ] }, // P3 BACKEND   (text above)
+  { progress: 0.42, pos: [-1.78,-2.1,  -13.5], target: [-1.78,-2.3,  -18  ] }, // P4 CHATBOT   (text below → cam shifted down)
+  { progress: 0.47, pos: [ 0.68,-2.9,  -15.5], target: [ 0.68,-3.1,  -20  ] }, // P5 UI/UX     (text below → cam shifted down)
 
   { progress: 0.5,  pos: [1,    -0.5,  -20  ], target: [0,     0,    -28  ] }, // PORTFOLIO — sweeping right
   { progress: 0.65, pos: [0,     1,    -35  ], target: [0,     0,    -42  ] }, // AI LAB — rising
