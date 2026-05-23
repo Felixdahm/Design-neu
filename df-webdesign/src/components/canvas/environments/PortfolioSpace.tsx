@@ -19,7 +19,7 @@ export const PORTFOLIO_PROJECTS: {
   {
     pos:   [-2.4, 0, 0.2],
     rot:   [0,  0.18, 0],
-    image: "/img_5.png",
+    image: "/portfolio/leadpilot.png",
     project: {
       name:   "LEADPILOT",
       client: "KI-Erklärfilme.de",
@@ -30,7 +30,7 @@ export const PORTFOLIO_PROJECTS: {
   {
     pos:   [ 2.4, 0, 0.2],
     rot:   [0, -0.18, 0],
-    image: "/img_6.png",
+    image: "/portfolio/cronos.png",
     project: {
       name:   "CRONOS",
       client: "Cronos Memmingen",

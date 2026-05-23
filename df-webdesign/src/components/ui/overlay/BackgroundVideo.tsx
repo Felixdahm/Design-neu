@@ -92,7 +92,7 @@ export function BackgroundVideo() {
         playsInline
         preload="auto"
         style={{ position: "absolute", opacity: 0, pointerEvents: "none", width: 1, height: 1 }}
-        src="/bg-space-journey-seekable.mp4"
+        src="/videos/bg-space-journey-seekable.mp4"
       />
 
       <canvas

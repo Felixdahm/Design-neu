@@ -10,13 +10,22 @@ export const SCROLL_HEIGHT_VH = 700;
 // Scroll progress 0→1 maps to these keyframes via cubic bezier.
 export const CAMERA_KEYFRAMES = [
   // [x, y, z, lookAt_x, lookAt_y, lookAt_z]
-  { progress: 0.0,  pos: [0, 0, 12],    target: [0, 0, 0] },   // VOID — floating above origin
-  { progress: 0.2,  pos: [0, 0, 8],     target: [0, 0, 0] },   // VOID — drifting in
-  { progress: 0.35, pos: [-1, 0.5, -5], target: [0, 0, -12] }, // SERVICES — sweeping left
-  { progress: 0.5,  pos: [1, -0.5, -20],target: [0, 0, -28] }, // PORTFOLIO — sweeping right
-  { progress: 0.65, pos: [0, 1, -35],   target: [0, 0, -42] }, // AI LAB — rising
-  { progress: 0.85, pos: [0, 0, -50],   target: [0, 0, -58] }, // TERMINAL — dead center
-  { progress: 1.0,  pos: [0, 0, -55],   target: [0, 0, -58] }, // TERMINAL — settled
+  { progress: 0.0,  pos: [0,     0,    12  ],  target: [0,     0,    0    ] }, // VOID — floating above origin
+  { progress: 0.2,  pos: [0,     0,    8   ],  target: [0,     0,    0    ] }, // VOID — drifting in
+
+  // SERVICES — overview shot, then camera follows the helix to each planet
+  // Planet world positions = env(-12) + local. Camera 4.5 units in front of each.
+  { progress: 0.22, pos: [ 0,    2.5,  -4  ],  target: [ 0,    0,    -14  ] }, // OVERVIEW — full solar system
+  { progress: 0.27, pos: [ 2.2,  0,    -7.5],  target: [ 2.2,  0,    -12  ] }, // P1 SEO
+  { progress: 0.32, pos: [ 0.68, 2.09, -8.7],  target: [ 0.68, 2.09, -13.2] }, // P2 WEBDESIGN
+  { progress: 0.37, pos: [-1.78, 1.30, -9.9],  target: [-1.78, 1.30, -14.4] }, // P3 BACKEND
+  { progress: 0.42, pos: [-1.78,-1.30,-11.1],  target: [-1.78,-1.30, -15.6] }, // P4 CHATBOT
+  { progress: 0.47, pos: [ 0.68,-2.09,-12.3],  target: [ 0.68,-2.09, -16.8] }, // P5 UI/UX
+
+  { progress: 0.5,  pos: [1,    -0.5,  -20  ], target: [0,     0,    -28  ] }, // PORTFOLIO — sweeping right
+  { progress: 0.65, pos: [0,     1,    -35  ], target: [0,     0,    -42  ] }, // AI LAB — rising
+  { progress: 0.85, pos: [0,     0,    -50  ], target: [0,     0,    -58  ] }, // TERMINAL — dead center
+  { progress: 1.0,  pos: [0,     0,    -55  ], target: [0,     0,    -58  ] }, // TERMINAL — settled
 ] as const;
 
 // ─── ENVIRONMENTS ────────────────────────────────────────────────────────────

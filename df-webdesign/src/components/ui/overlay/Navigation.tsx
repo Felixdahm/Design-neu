@@ -5,10 +5,10 @@ import { scrollToProgress } from "@/hooks/useLenis";
 
 const NAV_ITEMS = [
   { label: "VOID",     progress: 0.0  },
-  { label: "SERVICES", progress: 0.35 },
+  { label: "VORTEILE", progress: 0.22 },
   { label: "WORK",     progress: 0.5  },
   { label: "PROZESS",  progress: 0.65 },
-  { label: "CONTACT",  progress: 0.85 },
+  { label: "CONTACT",  progress: 1.0  },
 ];
 
 export function Navigation() {
@@ -25,7 +25,7 @@ export function Navigation() {
         className="flex items-center gap-3 cursor-pointer bg-transparent border-0 p-0 group"
       >
         <img
-          src="/df-logo.jpg"
+          src="/logo/df-logo.jpg"
           alt="DF Webdesign"
           style={{
             height: "52px",
@@ -54,7 +54,7 @@ export function Navigation() {
 
       {/* CTA */}
       <motion.button
-        onClick={() => scrollToProgress(0.85)}
+        onClick={() => scrollToProgress(1.0)}
         className="text-[10px] tracking-[0.3em] font-mono border border-white/10 text-white/60 hover:text-white hover:border-white/30 px-5 py-2.5 transition-all duration-500 cursor-pointer bg-transparent"
         whileHover={{ scale: 1.02 }}
       >
