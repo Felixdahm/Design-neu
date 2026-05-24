@@ -9,6 +9,9 @@ import { SectionTitle } from "@/components/ui/overlay/SectionTitle";
 import { PortfolioInfo } from "@/components/ui/overlay/PortfolioInfo";
 import { ScrollProgress } from "@/components/ui/overlay/ScrollProgress";
 import { BackgroundVideo } from "@/components/ui/overlay/BackgroundVideo";
+import { ChatWidget } from "@/components/ui/overlay/ChatWidget";
+import { ScrollHint } from "@/components/ui/overlay/ScrollHint";
+import { HeroText } from "@/components/ui/overlay/HeroText";
 import { SCROLL_HEIGHT_VH } from "@/config/world.config";
 
 const WorldScene = dynamic(
@@ -39,6 +42,9 @@ export default function Home() {
       <SectionTitle />
       <PortfolioInfo />
       <ContactForm />
+      <HeroText />
+      <ScrollHint />
+      <ChatWidget />
       <LoadingScreen />
     </div>
   );

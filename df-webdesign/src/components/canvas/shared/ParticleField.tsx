@@ -4,6 +4,12 @@ import { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { THREE_COLORS } from "@/config/world.config";
+import { getPerformanceTier } from "@/lib/performanceTier";
+
+const tier   = getPerformanceTier();
+const COUNTS = tier === "low"
+  ? { bg: 1800, mid: 500, fg: 80 }
+  : { bg: 6000, mid: 2000, fg: 300 };
 
 // ─── PARTICLE PHILOSOPHY ──────────────────────────────────────────────────────
 // Three distinct particle layers at different depths:
@@ -124,7 +130,7 @@ function useParticleLayer(config: {
 // ─── LAYER 1 — DEEP BACKGROUND ────────────────────────────────────────────────
 function BackgroundParticles() {
   const { meshRef, geo, mat } = useParticleLayer({
-    count:        6000,
+    count:        COUNTS.bg,
     spread:       [90, 30, 80],
     sizeRange:    [0.008, 0.025],
     driftSpeed:   0.08,
@@ -144,7 +150,7 @@ function BackgroundParticles() {
 // ─── LAYER 2 — MID FIELD ──────────────────────────────────────────────────────
 function MidFieldParticles() {
   const { meshRef, geo, mat } = useParticleLayer({
-    count:        2000,
+    count:        COUNTS.mid,
     spread:       [60, 20, 70],
     sizeRange:    [0.015, 0.045],
     driftSpeed:   0.12,
@@ -164,7 +170,7 @@ function MidFieldParticles() {
 // ─── LAYER 3 — FOREGROUND DUST ────────────────────────────────────────────────
 function ForegroundDust() {
   const { meshRef, geo, mat } = useParticleLayer({
-    count:        300,
+    count:        COUNTS.fg,
     spread:       [25, 10, 30],
     sizeRange:    [0.04, 0.1],
     driftSpeed:   0.06,

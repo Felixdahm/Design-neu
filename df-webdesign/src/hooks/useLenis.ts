@@ -1,18 +1,17 @@
 import { useEffect, useRef } from "react";
 import Lenis from "lenis";
 
-// Global singleton — one Lenis instance for the whole app
 let _lenis: Lenis | null = null;
 let _progress = 0;
 let _lastInputTime = 0;
 
 if (typeof window !== "undefined") {
-  window.addEventListener("wheel",      () => { _lastInputTime = Date.now(); }, { passive: true });
-  window.addEventListener("touchmove",  () => { _lastInputTime = Date.now(); }, { passive: true });
+  window.addEventListener("wheel",     () => { _lastInputTime = Date.now(); }, { passive: true });
+  window.addEventListener("touchmove", () => { _lastInputTime = Date.now(); }, { passive: true });
 }
 
-export function getScrollProgress(): number  { return _progress; }
-export function getIsScrolling():    boolean  { return Date.now() - _lastInputTime < 300; }
+export function getScrollProgress(): number { return _progress; }
+export function getIsScrolling():    boolean { return Date.now() - _lastInputTime < 300; }
 
 export function scrollToProgress(progress: number) {
   if (!_lenis) return;
@@ -22,10 +21,10 @@ export function scrollToProgress(progress: number) {
 
 // ── Snap zones ────────────────────────────────────────────────────────────────
 const PLANET_SNAPS    = [0.27, 0.32, 0.37, 0.42, 0.47] as const;
-const SNAP_ZONE_IN    = 0.22;  // planet zone entry
-const SNAP_ZONE_OUT   = 0.50;  // planet zone exit
-const PROZESS_ZONE_IN = 0.60;  // from here a single scroll down jumps to contact
-const PROZESS_ZONE_OUT= 0.88;  // above this = already in/past terminal, free scroll
+const SNAP_ZONE_IN    = 0.22;
+const SNAP_ZONE_OUT   = 0.50;
+const PROZESS_ZONE_IN = 0.70;
+const PROZESS_ZONE_OUT= 0.88;
 
 export function useLenis() {
   const rafRef = useRef<number>(0);
@@ -52,9 +51,9 @@ export function useLenis() {
     }
     rafRef.current = requestAnimationFrame(raf);
 
-    // ── Snap system ─────────────────────────────────────────────────────────
-    let snapIdx  = -1;   // which planet we're currently stopped at (-1 = not snapped)
-    let snapping = false; // true while a snap animation is in progress
+    // ── Shared snap state ─────────────────────────────────────────────────────
+    let snapIdx  = -1;
+    let snapping = false;
 
     function doSnap(targetProgress: number, duration = 1.2) {
       snapping = true;
@@ -65,78 +64,105 @@ export function useLenis() {
         easing: (t: number) => 1 - Math.pow(1 - t, 3),
         force: true,
       });
-      setTimeout(() => {
-        lenis.start();
-        snapping = false;
-      }, duration * 1000 + 300);
+      setTimeout(() => { lenis.start(); snapping = false; }, duration * 1000 + 300);
     }
 
-    function onSnapWheel(e: WheelEvent) {
-      const p   = _progress;
-      const dir = e.deltaY > 0 ? 1 : -1;
+    // Returns {target, nextIdx, duration} if a snap should fire, null if scroll is free
+    function resolveSnap(p: number, dir: number): { target: number; nextIdx: number; duration: number } | null {
+      if (dir < 0) return null;
 
-      // Scrolling up → always free, cancel any running snap
+      // Hero → Services overview
+      if (p < SNAP_ZONE_IN) return { target: SNAP_ZONE_IN, nextIdx: -1, duration: 1.4 };
+
+      // Prozess → Contact
+      if (p >= PROZESS_ZONE_IN && p < PROZESS_ZONE_OUT) return { target: 1.0, nextIdx: -1, duration: 2.0 };
+
+      // Planet zone
+      const inZone = p > SNAP_ZONE_IN - 0.03 && p < SNAP_ZONE_OUT + 0.01;
+      if (!inZone) return null;
+
+      if (snapIdx === -1) {
+        let found = -1;
+        for (let i = 0; i < PLANET_SNAPS.length; i++) {
+          if (PLANET_SNAPS[i] > p + 0.005) { found = i; break; }
+        }
+        if (found === -1) return null;
+        return { target: PLANET_SNAPS[found], nextIdx: found, duration: 1.2 };
+      } else {
+        const next = snapIdx + 1;
+        if (next >= PLANET_SNAPS.length) return { target: SNAP_ZONE_OUT, nextIdx: -1, duration: 1.2 };
+        return { target: PLANET_SNAPS[next], nextIdx: next, duration: 1.2 };
+      }
+    }
+
+    // ── Wheel handler ─────────────────────────────────────────────────────────
+    function onWheel(e: WheelEvent) {
+      const dir = e.deltaY > 0 ? 1 : -1;
+      const p   = _progress;
+
       if (dir < 0) {
         if (snapping) { lenis.start(); snapping = false; }
         snapIdx = -1;
         return;
       }
 
-      // ── Prozess → Contact jump ───────────────────────────────────────────
-      if (p >= PROZESS_ZONE_IN && p < PROZESS_ZONE_OUT) {
-        e.preventDefault();
-        if (!snapping) doSnap(1.0, 2.0);  // cinematic long jump
+      if (snapping) { e.preventDefault(); return; }
+
+      const snap = resolveSnap(p, dir);
+      if (!snap) { snapIdx = -1; return; }
+
+      e.preventDefault();
+      snapIdx = snap.nextIdx;
+      doSnap(snap.target, snap.duration);
+    }
+
+    // ── Touch handler ─────────────────────────────────────────────────────────
+    let touchStartY  = 0;
+    let touchHandled = false;
+
+    function onTouchStart(e: TouchEvent) {
+      touchStartY  = e.touches[0].clientY;
+      touchHandled = false;
+    }
+
+    function onTouchMove(e: TouchEvent) {
+      // Keep blocking scroll for the rest of a handled gesture
+      if (touchHandled) { e.preventDefault(); return; }
+
+      const deltaY = touchStartY - e.touches[0].clientY;
+      if (Math.abs(deltaY) < 12) return; // wait for intent to be clear
+
+      const dir = deltaY > 0 ? 1 : -1;
+      const p   = _progress;
+
+      if (dir < 0) {
+        if (snapping) { lenis.start(); snapping = false; }
+        snapIdx = -1;
         return;
       }
 
-      const inZone = p > SNAP_ZONE_IN - 0.03 && p < SNAP_ZONE_OUT + 0.01;
-      if (!inZone) { snapIdx = -1; return; }
+      if (snapping) { e.preventDefault(); touchHandled = true; return; }
 
-      // Block further input while a snap is animating
-      if (snapping) { e.preventDefault(); return; }
+      const snap = resolveSnap(p, dir);
+      if (!snap) { snapIdx = -1; return; }
 
-      // Determine the next snap target BEFORE calling preventDefault.
-      // If there is nothing left to snap to, let Lenis scroll freely.
-      let target: number;
-      let nextIdx: number;
-
-      if (snapIdx === -1) {
-        // Re-entering the zone: find the first planet strictly ahead of current position
-        let found = -1;
-        for (let i = 0; i < PLANET_SNAPS.length; i++) {
-          if (PLANET_SNAPS[i] > p + 0.005) { found = i; break; }
-        }
-        if (found === -1) {
-          // Past all planets — release scroll, no preventDefault
-          snapIdx = -1;
-          return;
-        }
-        nextIdx = found;
-        target  = PLANET_SNAPS[found];
-      } else {
-        const next = snapIdx + 1;
-        if (next >= PLANET_SNAPS.length) {
-          nextIdx = -1;
-          target  = SNAP_ZONE_OUT;
-        } else {
-          nextIdx = next;
-          target  = PLANET_SNAPS[next];
-        }
-      }
-
-      // We have a target — take over the scroll
       e.preventDefault();
-      snapIdx = nextIdx;
-      doSnap(target);
+      touchHandled = true;
+      snapIdx = snap.nextIdx;
+      doSnap(snap.target, snap.duration);
     }
 
-    window.addEventListener("wheel", onSnapWheel, { passive: false });
+    window.addEventListener("wheel",      onWheel,      { passive: false });
+    window.addEventListener("touchstart", onTouchStart, { passive: true  });
+    window.addEventListener("touchmove",  onTouchMove,  { passive: false });
 
     return () => {
       cancelAnimationFrame(rafRef.current);
-      window.removeEventListener("wheel", onSnapWheel);
+      window.removeEventListener("wheel",      onWheel);
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchmove",  onTouchMove);
       lenis.destroy();
-      _lenis = null;
+      _lenis    = null;
       _progress = 0;
     };
   }, []);

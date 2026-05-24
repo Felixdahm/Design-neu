@@ -43,7 +43,7 @@ const SERVICES: {
     desc: "Inklusive — kein fremdes\nCMS, keine Folgekosten",
     textureUrl: "/planets/planet-backend.jpg",
     brightness: 3.5,
-    ringColor: "#4FC3F7",
+    ringColor: "#1565C0",
     textAbove: true,
   },
   {
@@ -52,7 +52,7 @@ const SERVICES: {
     desc: "Regelmäßige Updates\nwährend der Entwicklung",
     textureUrl: "/planets/planet-chatbot.jpg",
     brightness: 3.5,
-    ringColor: "#00E5FF",
+    ringColor: "#00BCD4",
   },
   {
     x:  0.68,    y: -2.09,  z:  -8.0, delay: 0.48,
@@ -60,7 +60,7 @@ const SERVICES: {
     desc: "Kein Stundensatz —\nimmer ein direkter Ansprechpartner",
     textureUrl: "/planets/planet-uiux.jpg",
     brightness: 3.5,
-    ringColor: "#00E5FF",
+    ringColor: "#AB47BC",
   },
 ];
 
@@ -138,7 +138,7 @@ function Planet({ x, y, z, delay, num, title, desc, textureUrl, brightness, ring
   // For "above": title at top (grows up), desc below title (grows down), num closest to planet
   // For "below": num closest to planet, title next, desc furthest (grows down)
   const TEXT_Y_NUM   = textAbove ?  1.18 : -1.30;
-  const TEXT_Y_DESC  = textAbove ?  1.58 : -1.88;
+  const TEXT_Y_DESC  = textAbove ?  1.72 : -1.88;
   const TEXT_Y_TITLE = textAbove ?  2.08 : -1.52;
   const CONN_Y       = textAbove ?  1.00 : -1.10;
 

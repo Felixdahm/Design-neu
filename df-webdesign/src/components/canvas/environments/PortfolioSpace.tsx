@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useCallback, useState } from "react";
 import { useFrame, useLoader } from "@react-three/fiber";
-import { Select } from "@react-three/postprocessing";
+
 import * as THREE from "three";
 import { ENVIRONMENTS, THREE_COLORS } from "@/config/world.config";
 import { getScrollProgress, getIsScrolling } from "@/hooks/useLenis";
@@ -107,19 +107,16 @@ function PortfolioScreen({
 
   return (
     <group ref={groupRef} position={pos} rotation={rot}>
-      {/* On hover: Select excludes this mesh from bloom → original colors show */}
-      <Select enabled={isHovered}>
-        <mesh onPointerEnter={onEnter} onPointerLeave={onLeave} onClick={onClick}>
-          <planeGeometry args={[3.5, 2.25]} />
-          <meshBasicMaterial
-            map={texture}
-            toneMapped={false}
-            polygonOffset
-            polygonOffsetFactor={-1}
-            polygonOffsetUnits={-1}
-          />
-        </mesh>
-      </Select>
+      <mesh onPointerEnter={onEnter} onPointerLeave={onLeave} onClick={onClick}>
+        <planeGeometry args={[3.5, 2.25]} />
+        <meshBasicMaterial
+          map={texture}
+          toneMapped={false}
+          polygonOffset
+          polygonOffsetFactor={-1}
+          polygonOffsetUnits={-1}
+        />
+      </mesh>
 
       {/* Frame, glow line, dots — NOT in Select → they keep their bloom */}
       <mesh position={[0, 0, -0.04]} raycast={() => undefined}>

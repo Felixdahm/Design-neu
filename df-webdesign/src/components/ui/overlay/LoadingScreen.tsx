@@ -1,88 +1,100 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-export function LoadingScreen() {
-  const [progress, setProgress]   = useState(0);
-  const [visible,  setVisible]    = useState(true);
-  const [phase,    setPhase]      = useState<"loading" | "ready" | "exit">("loading");
+type Phase = "black" | "reveal" | "hold" | "exit";
 
+export function LoadingScreen() {
+  const [visible,  setVisible]  = useState(true);
+  const [phase,    setPhase]    = useState<Phase>("black");
+  const [loaded,   setLoaded]   = useState(false);
+
+  // ── Silent loading progress in background ───────────────────────────────
   useEffect(() => {
-    // Fast ramp to 85%, then slow down for dramatic effect
-    const interval = setInterval(() => {
-      setProgress(p => {
-        if (p >= 100) { clearInterval(interval); return 100; }
-        const increment = p < 85 ? Math.random() * 12 + 4 : Math.random() * 2 + 0.5;
-        return Math.min(p + increment, 100);
-      });
+    let p = 0;
+    const iv = setInterval(() => {
+      p += p < 85 ? Math.random() * 12 + 4 : Math.random() * 2 + 0.5;
+      if (p >= 100) { clearInterval(iv); setLoaded(true); }
     }, 60);
-    return () => clearInterval(interval);
+    return () => clearInterval(iv);
   }, []);
 
+  // ── Cinematic sequence (starts once loaded) ──────────────────────────────
   useEffect(() => {
-    if (progress >= 100) {
-      setTimeout(() => setPhase("ready"), 300);
-      setTimeout(() => setPhase("exit"),  1000);
-      setTimeout(() => setVisible(false), 2400);
-    }
-  }, [progress]);
+    if (!loaded) return;
+    // 0.6s black → logo reveal → 1.8s hold → exit
+    const t1 = setTimeout(() => setPhase("reveal"), 200);
+    const t2 = setTimeout(() => {
+      setPhase("hold");
+      window.dispatchEvent(new Event("intro-hold"));
+    }, 200 + 900);
+    const t3 = setTimeout(() => setPhase("exit"),   200 + 900 + 700);
+    const t4 = setTimeout(() => setVisible(false),  200 + 900 + 700 + 800);
+    return () => [t1, t2, t3, t4].forEach(clearTimeout);
+  }, [loaded]);
 
   return (
     <AnimatePresence>
       {visible && (
         <motion.div
-          className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black"
-          exit={{ opacity: 0 }}
-          transition={{ duration: 1.4, ease: [0.16, 1, 0.3, 1] }}
+          style={{
+            position:       "fixed",
+            inset:          0,
+            zIndex:         200,
+            background:     "#000",
+            display:        "flex",
+            flexDirection:  "column",
+            alignItems:     "center",
+            justifyContent: "center",
+            gap:            "1.8rem",
+          }}
+          exit={{ y: "-100%" }}
+          transition={{ duration: 0.9, ease: [0.76, 0, 0.24, 1] }}
         >
-          {/* DF Logo */}
+          {/* ── Logo ── */}
+          <motion.img
+            src="/logo/df-logo.jpg"
+            alt="DF Webdesign"
+            initial={{ opacity: 0, scale: 0.94, filter: "blur(12px) invert(1) hue-rotate(180deg)" }}
+            animate={phase === "black" ? {} : {
+              opacity: 1,
+              scale:   1,
+              filter:  "blur(0px) invert(1) hue-rotate(180deg)",
+            }}
+            transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+            style={{ height: "72px", width: "auto", objectFit: "contain" }}
+          />
+
+          {/* ── Tagline — fades in slightly after logo ── */}
           <motion.div
-            className="font-mono tracking-[0.6em] text-white mb-10 text-lg select-none"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1.2, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            initial={{ opacity: 0, y: 6 }}
+            animate={phase === "black" ? {} : { opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            style={{
+              fontFamily:    "monospace",
+              fontSize:      "0.58rem",
+              letterSpacing: "0.55em",
+              color:         "rgba(255,255,255,0.28)",
+              userSelect:    "none",
+            }}
           >
-            DF
+            WEBDESIGN
           </motion.div>
 
-          {/* Progress bar */}
+          {/* ── Thin accent line under tagline ── */}
           <motion.div
-            className="w-24 h-px bg-white/8 relative overflow-hidden"
-            initial={{ opacity: 0, scaleX: 0 }}
-            animate={{ opacity: 1, scaleX: 1 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-          >
-            <motion.div
-              className="absolute inset-y-0 left-0 bg-[#4FC3F7]"
-              style={{ width: `${Math.min(progress, 100)}%`, transition: "width 80ms linear" }}
-            />
-          </motion.div>
-
-          {/* Counter */}
-          <motion.div
-            className="font-mono text-[9px] tracking-[0.5em] text-white/20 mt-4 tabular-nums"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
-          >
-            {String(Math.min(Math.floor(progress), 100)).padStart(3, "0")}
-          </motion.div>
-
-          {/* "ENTERING" on ready */}
-          <AnimatePresence>
-            {phase === "ready" && (
-              <motion.div
-                className="absolute bottom-12 font-mono text-[8px] tracking-[0.8em] text-white/30"
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.6 }}
-              >
-                ENTERING UNIVERSE
-              </motion.div>
-            )}
-          </AnimatePresence>
+            initial={{ scaleX: 0, opacity: 0 }}
+            animate={phase === "black" ? {} : { scaleX: 1, opacity: 1 }}
+            transition={{ duration: 0.7, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            style={{
+              width:          "40px",
+              height:         "1px",
+              background:     "#4FC3F7",
+              transformOrigin:"center",
+              boxShadow:      "0 0 8px rgba(79,195,247,0.8)",
+            }}
+          />
         </motion.div>
       )}
     </AnimatePresence>

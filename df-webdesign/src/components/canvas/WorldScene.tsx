@@ -2,7 +2,7 @@
 
 import { Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
-import { Selection } from "@react-three/postprocessing";
+
 import { CameraRig } from "./shared/CameraRig";
 import { ParticleField } from "./shared/ParticleField";
 import { DynamicLighting } from "./shared/DynamicLighting";
@@ -13,6 +13,9 @@ import { PortfolioSpace } from "./environments/PortfolioSpace";
 import { AILab } from "./environments/AILab";
 import { ContactTerminal } from "./environments/ContactTerminal";
 import { FOG } from "@/config/world.config";
+import { getPerformanceTier } from "@/lib/performanceTier";
+
+const tier = getPerformanceTier();
 
 export function WorldScene() {
   return (
@@ -27,12 +30,11 @@ export function WorldScene() {
           toneMappingExposure: 0.85,
         }}
         style={{ width: "100%", height: "100%" }}
-        dpr={[1, 1.5]}
+        dpr={tier === "low" ? [1, 1] : [1, 1.5]}
         onCreated={({ gl }) => gl.setClearColor(0x000000, 0)} // Alpha 0 = fully transparent bg
       >
         {/* Selection context — used by SelectiveBloom (inverted) in PostProcessing.
             Any mesh wrapped in <Select enabled> is excluded from bloom. */}
-        <Selection>
           {/* Fog fades 3D objects into the video background — no hard edges */}
           <fog attach="fog" args={["#000008", FOG.near, FOG.far]} />
           <ambientLight intensity={0.08} color="#0a0a18" />
@@ -46,12 +48,8 @@ export function WorldScene() {
             <ParticleField />
           </Suspense>
 
-          {/* VoidIntro — NO Suspense wrapper. Uses only primitives + video.
-              This MUST render even if fonts are loading elsewhere. */}
           <VoidIntro />
 
-          {/* Remaining environments — each has its own Suspense boundary.
-              If one suspends (font load), others are unaffected. */}
           <Suspense fallback={null}>
             <ServicesWorld />
           </Suspense>
@@ -65,11 +63,9 @@ export function WorldScene() {
             <ContactTerminal />
           </Suspense>
 
-          {/* PostProcessing — always last, runs on the final composited frame */}
           <Suspense fallback={null}>
             <PostProcessing />
           </Suspense>
-        </Selection>
       </Canvas>
     </div>
   );
