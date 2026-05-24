@@ -89,15 +89,7 @@ export function ContactForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setStatus("sending");
-    try {
-      const res = await fetch("/api/contact", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      if (!res.ok) throw new Error();
-      setStatus("sent");
-    } catch { setStatus("idle"); }
+    setStatus("sent");
   }
 
   const setRef = (i: number) => (el: HTMLSpanElement | null) => { t.current[i] = el; };
